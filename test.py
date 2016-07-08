@@ -9,13 +9,13 @@ class AbstractProjection:
   def __init__(self):
     pass
 
-  def get_pixel_from_uv(self, u, v):
+  def get_pixel_from_uv(self, u, v, image):
     x = int(self.imsize[0]*u)
     y = int(self.imsize[1]*v)
     x = min(x,self.imsize[0]-1)
     y = min(y,self.imsize[1]-1)
     try:
-      pix = self.image.getpixel((x,y))
+      pix = image.getpixel((x,y))
       return pix
     except:
       print x,y
@@ -44,6 +44,10 @@ class AbstractProjection:
           pixel = sourceProjection.pixel_value(theta, phi)
         self.image.putpixel((x,y),pixel)
 
+  def point_on_sphere(self, theta, phi):
+    r = math.cos(phi)
+    return (r*math.cos(theta), r*math.sin(theta), math.sin(phi))
+
   @abc.abstractmethod
   def pixel_value(self, theta, phi):
     return None
@@ -61,7 +65,7 @@ class EquirectangularProjection(AbstractProjection):
     u = 0.5+0.5*(theta/math.pi)
     # phi: -pi/2..pi/2 -> v: 0..1
     v = 0.5+(phi/math.pi)
-    return self.get_pixel_from_uv(u,v)
+    return self.get_pixel_from_uv(u,v, self.image)
 
   def angular_position(self, u, v):
     # theta: u: 0..1 -> -pi..pi
@@ -77,7 +81,7 @@ class SideBySideFisheyeProjection(AbstractProjection):
   def pixel_value(self, theta, phi):
     r = math.cos(phi)
     # z is elevation in this case
-    sphere_pnt = (r*math.cos(theta), r*math.sin(theta), math.sin(phi))
+    sphere_pnt = self.point_on_sphere(theta, phi)
 
     # sphere_pnt.x: [-1..1]
     u = 0.5+(sphere_pnt[0]*-0.5)
@@ -89,7 +93,7 @@ class SideBySideFisheyeProjection(AbstractProjection):
     #sphere_pnt.z: -1..1 -> v: 0..1
     v = 0.5+(sphere_pnt[2]*0.5)
 
-    return self.get_pixel_from_uv(u,v)
+    return self.get_pixel_from_uv(u,v, self.image)
 
   def angular_position(self, up, v):
     # correct for hemisphere
@@ -114,6 +118,58 @@ class SideBySideFisheyeProjection(AbstractProjection):
        theta = theta-math.pi
 
     return (theta,phi)
+
+class CubemapProjection(AbstractProjection):
+  def __init__(self):
+    AbstractProjection.__init__(self)
+
+  def loadImages(self, front, right, back, left, top, bottom):
+    self.front = Image.open(front)
+    self.right = Image.open(right)
+    self.back = Image.open(back)
+    self.left = Image.open(left)
+    self.top = Image.open(top)
+    self.bottom = Image.open(bottom)
+    self.imsize = self.front.size
+
+  def pixel_value(self, theta, phi):
+    pi2 = math.pi/2.0
+    pi4 = math.pi/4.0
+
+    sphere_pnt = self.point_on_sphere(theta, phi)
+
+    if phi <= pi4 and phi >= -pi4:
+      # not top or bottom
+      v = 0.5+(sphere_pnt[2]*0.5)
+      if theta <= pi4 and theta >= -pi4:
+        # front face
+        u = 0.5+(sphere_pnt[1]*0.5)
+        return self.get_pixel_from_uv(u,v, self.front)
+      elif theta > pi4 and theta < (pi4+pi2):
+        # right face
+        u = 0.5+(sphere_pnt[0]*0.5)
+        return self.get_pixel_from_uv(u,v, self.right)
+      elif theta < -pi4 and theta < (-pi4-pi2):
+        # left face
+        u = 0.5+(sphere_pnt[0]*-0.5)
+        return self.get_pixel_from_uv(u,v, self.left)
+      else:
+        # back face
+        u = 0.5+(sphere_pnt[1]*-0.5)
+        return self.get_pixel_from_uv(u,v, self.back)
+    elif phi>pi4:
+      # top face
+      u = 0.5+(sphere_pnt[1]*0.5)
+      v = 0.5+(sphere_pnt[0]*-0.5)
+      return self.get_pixel_from_uv(u,v, self.top)
+    else:
+      # bottom face
+      u = 0.5+(sphere_pnt[1]*0.5)
+      v = 0.5+(sphere_pnt[0]*0.5)
+      return self.get_pixel_from_uv(u,v, self.bottom)
+
+  def angular_position(self, u, v):
+    return None
 
 eq = EquirectangularProjection()
 eq.loadImage("vrsi.jpg")
