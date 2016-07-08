@@ -28,9 +28,12 @@ class AbstractProjection:
     self.imsize = (width*2, height*2)
     self.image = Image.new("RGB", self.imsize)
 
+  def downsample(self, image):
+    resized = image.resize((self.imsize[0]/2, self.imsize[1]/2), Image.ANTIALIAS)
+    return resized
+
   def saveImage(self, destFile):
-    resized = self.image.resize((self.imsize[0]/2, self.imsize[1]/2), Image.ANTIALIAS)
-    resized.save(destFile)
+    self.downsample(self.image).save(destFile)
 
   def reprojectToThis(self, sourceProjection):
     for x in range(self.imsize[0]):
@@ -132,6 +135,23 @@ class CubemapProjection(AbstractProjection):
     self.bottom = Image.open(bottom)
     self.imsize = self.front.size
 
+  def initImages(self, width, height):
+    self.imsize = (width*2, height*2)
+    self.front = Image.new("RGB", self.imsize)
+    self.right = Image.new("RGB", self.imsize)
+    self.back = Image.new("RGB", self.imsize)
+    self.left = Image.new("RGB", self.imsize)
+    self.top = Image.new("RGB", self.imsize)
+    self.bottom = Image.new("RGB", self.imsize)
+
+  def saveImages(self, front, right, back, left, top, bottom):
+    self.downsample(self.front).save(front)
+    self.downsample(self.right).save(right)
+    self.downsample(self.back).save(back)
+    self.downsample(self.left).save(left)
+    self.downsample(self.top).save(top)
+    self.downsample(self.bottom).save(bottom)
+
   def pixel_value(self, theta, phi):
     pi2 = math.pi/2.0
     pi4 = math.pi/4.0
@@ -168,21 +188,73 @@ class CubemapProjection(AbstractProjection):
       v = 0.5+(sphere_pnt[0]*0.5)
       return self.get_pixel_from_uv(u,v, self.bottom)
 
+  def get_theta_phi(self, _x, _y, _z):
+    dv = math.sqrt(_x*_x + _y*_y + _z*_z)
+    x = _x/dv
+    y = _y/dv
+    z = _z/dv
+    theta = math.atan2(y, x)
+    phi = math.asin(z)
+    return theta, phi
+
   def angular_position(self, u, v):
     return None
 
+  def reprojectToThis(self, sourceProjection):
+    halfcubeedge = 1.0
+
+    for x in range(self.imsize[0]):
+      for y in range(self.imsize[1]):
+        u = 2.0*(float(x)/float(self.imsize[0])-0.5)
+        v = 2.0*(float(y)/float(self.imsize[1])-0.5)
+
+        # front
+        theta, phi = self.get_theta_phi(halfcubeedge, u, v)
+        pixel = sourceProjection.pixel_value(theta, phi)
+        self.front.putpixel((x,y), pixel)
+
+        # right
+        theta, phi = self.get_theta_phi(-u, halfcubeedge, v)
+        pixel = sourceProjection.pixel_value(theta, phi)
+        self.right.putpixel((x,y), pixel)
+
+        # left
+        theta, phi = self.get_theta_phi(u, -halfcubeedge, v)
+        pixel = sourceProjection.pixel_value(theta, phi)
+        self.left.putpixel((x,y), pixel)
+
+        # back
+        theta, phi = self.get_theta_phi(-halfcubeedge, -u, v)
+        pixel = sourceProjection.pixel_value(theta, phi)
+        self.back.putpixel((x,y), pixel)
+
+        # bottom
+        theta, phi = self.get_theta_phi(-v, u, halfcubeedge)
+        pixel = sourceProjection.pixel_value(theta, phi)
+        self.bottom.putpixel((x,y), pixel)
+
+        # top
+        theta, phi = self.get_theta_phi(v, u, -halfcubeedge)
+        pixel = sourceProjection.pixel_value(theta, phi)
+        self.top.putpixel((x,y), pixel)
+
 eq = EquirectangularProjection()
-eq.loadImage("vrsi.jpg")
+eq.loadImage("cuber.jpg")
+#
+# sbs = SideBySideFisheyeProjection()
+# sbs.initImage(2048, 1024)
+# sbs.reprojectToThis(eq)
+# sbs.saveImage("foo.png")
+#
+# sbs2 = SideBySideFisheyeProjection()
+# sbs2.loadImage("foo.png")
+#
+# eq2 = EquirectangularProjection()
+# eq2.initImage(2048,1024)
+# eq2.reprojectToThis(sbs2)
+# eq2.saveImage("foo2.png")
 
-sbs = SideBySideFisheyeProjection()
-sbs.initImage(2048, 1024)
-sbs.reprojectToThis(eq)
-sbs.saveImage("foo.png")
-
-sbs2 = SideBySideFisheyeProjection()
-sbs2.loadImage("foo.png")
-
-eq2 = EquirectangularProjection()
-eq2.initImage(2048,1024)
-eq2.reprojectToThis(sbs2)
-eq2.saveImage("foo2.png")
+cb = CubemapProjection()
+cb.initImages(1024,1024)
+cb.reprojectToThis(eq)
+cb.saveImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
