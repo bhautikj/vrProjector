@@ -152,6 +152,7 @@ class CubemapProjection(AbstractProjection):
     self.downsample(self.top).save(top)
     self.downsample(self.bottom).save(bottom)
 
+  #TODO: fix! This is in real bad shape.
   def pixel_value(self, theta, phi):
     pi2 = math.pi/2.0
     pi4 = math.pi/4.0
@@ -238,8 +239,8 @@ class CubemapProjection(AbstractProjection):
         pixel = sourceProjection.pixel_value(theta, phi)
         self.top.putpixel((x,y), pixel)
 
-eq = EquirectangularProjection()
-eq.loadImage("cuber.jpg")
+# eq = EquirectangularProjection()
+# eq.loadImage("cuber.jpg")
 #
 # sbs = SideBySideFisheyeProjection()
 # sbs.initImage(2048, 1024)
@@ -254,7 +255,15 @@ eq.loadImage("cuber.jpg")
 # eq2.reprojectToThis(sbs2)
 # eq2.saveImage("foo2.png")
 
-cb = CubemapProjection()
-cb.initImages(1024,1024)
-cb.reprojectToThis(eq)
-cb.saveImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+# cb = CubemapProjection()
+# cb.initImages(1024,1024)
+# cb.reprojectToThis(eq)
+# cb.saveImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+
+
+# cb2 = CubemapProjection()
+# cb2.loadImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+# eq2 = EquirectangularProjection()
+# eq2.initImage(2048,1024)
+# eq2.reprojectToThis(cb2)
+# eq2.saveImage("foo.png")
