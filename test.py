@@ -152,7 +152,6 @@ class CubemapProjection(AbstractProjection):
     self.downsample(self.top).save(top)
     self.downsample(self.bottom).save(bottom)
 
-  #TODO: fix! This is in real bad shape.
   def pixel_value(self, theta, phi):
     sphere_pnt = self.point_on_sphere(theta, phi)
     x = sphere_pnt[0]
@@ -202,10 +201,6 @@ class CubemapProjection(AbstractProjection):
         v = 0.5+t*x
         if u>=0.0 and u<=1.0 and v>=0.0 and v<=1.0:
           return self.get_pixel_from_uv(u, v, self.top)
-
-
-    # if x>0.999:
-    #   return self.get_pixel_from_uv(y, z, self.front)
 
     return None
 
