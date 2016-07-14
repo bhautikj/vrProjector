@@ -18,7 +18,7 @@ class AbstractProjection:
       pix = image.getpixel((x,y))
       return pix
     except:
-      print x,y
+      print x,y, self.imsize[0], self.imsize[1]
 
   def loadImage(self, imageFile):
     self.image = Image.open(imageFile)
@@ -154,40 +154,60 @@ class CubemapProjection(AbstractProjection):
 
   #TODO: fix! This is in real bad shape.
   def pixel_value(self, theta, phi):
-    pi2 = math.pi/2.0
-    pi4 = math.pi/4.0
-
     sphere_pnt = self.point_on_sphere(theta, phi)
+    x = sphere_pnt[0]
+    y = sphere_pnt[1]
+    z = sphere_pnt[2]
 
-    if phi <= pi4 and phi >= -pi4:
-      # not top or bottom
-      v = 0.5+(sphere_pnt[2]*0.5)
-      if theta <= pi4 and theta >= -pi4:
-        # front face
-        u = 0.5+(sphere_pnt[1]*0.5)
-        return self.get_pixel_from_uv(u,v, self.front)
-      elif theta > pi4 and theta < (pi4+pi2):
-        # right face
-        u = 0.5+(sphere_pnt[0]*0.5)
-        return self.get_pixel_from_uv(u,v, self.right)
-      elif theta < -pi4 and theta < (-pi4-pi2):
-        # left face
-        u = 0.5+(sphere_pnt[0]*-0.5)
-        return self.get_pixel_from_uv(u,v, self.left)
-      else:
-        # back face
-        u = 0.5+(sphere_pnt[1]*-0.5)
-        return self.get_pixel_from_uv(u,v, self.back)
-    elif phi>pi4:
-      # top face
-      u = 0.5+(sphere_pnt[1]*0.5)
-      v = 0.5+(sphere_pnt[0]*-0.5)
-      return self.get_pixel_from_uv(u,v, self.top)
-    else:
-      # bottom face
-      u = 0.5+(sphere_pnt[1]*0.5)
-      v = 0.5+(sphere_pnt[0]*0.5)
-      return self.get_pixel_from_uv(u,v, self.bottom)
+    eps = 1e-6
+
+    if math.fabs(x)>eps:
+      if x>0:
+        t = 0.5/x
+        u = 0.5+t*y
+        v = 0.5+t*z
+        if u>=0.0 and u<=1.0 and v>=0.0 and v<=1.0:
+          return self.get_pixel_from_uv(u, v, self.front)
+      elif x<0:
+        t = 0.5/-x
+        u = 0.5+t*-y
+        v = 0.5+t*z
+        if u>=0.0 and u<=1.0 and v>=0.0 and v<=1.0:
+          return self.get_pixel_from_uv(u, v, self.back)
+
+    if math.fabs(y)>eps:
+      if y>0:
+        t = 0.5/y
+        u = 0.5+t*-x
+        v = 0.5+t*z
+        if u>=0.0 and u<=1.0 and v>=0.0 and v<=1.0:
+          return self.get_pixel_from_uv(u, v, self.right)
+      elif y<0:
+        t = 0.5/-y
+        u = 0.5+t*x
+        v = 0.5+t*z
+        if u>=0.0 and u<=1.0 and v>=0.0 and v<=1.0:
+          return self.get_pixel_from_uv(u, v, self.left)
+
+    if math.fabs(z)>eps:
+      if z>0:
+        t = 0.5/z
+        u = 0.5+t*y
+        v = 0.5+t*-x
+        if u>=0.0 and u<=1.0 and v>=0.0 and v<=1.0:
+          return self.get_pixel_from_uv(u, v, self.bottom)
+      elif z<0:
+        t = 0.5/-z
+        u = 0.5+t*y
+        v = 0.5+t*x
+        if u>=0.0 and u<=1.0 and v>=0.0 and v<=1.0:
+          return self.get_pixel_from_uv(u, v, self.top)
+
+
+    # if x>0.999:
+    #   return self.get_pixel_from_uv(y, z, self.front)
+
+    return None
 
   def get_theta_phi(self, _x, _y, _z):
     dv = math.sqrt(_x*_x + _y*_y + _z*_z)
@@ -261,9 +281,9 @@ class CubemapProjection(AbstractProjection):
 # cb.saveImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
 
 
-# cb2 = CubemapProjection()
-# cb2.loadImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
-# eq2 = EquirectangularProjection()
-# eq2.initImage(2048,1024)
-# eq2.reprojectToThis(cb2)
-# eq2.saveImage("foo.png")
+cb2 = CubemapProjection()
+cb2.loadImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+eq2 = EquirectangularProjection()
+eq2.initImage(2048,1024)
+eq2.reprojectToThis(cb2)
+eq2.saveImage("foo.png")
