@@ -3,6 +3,8 @@ from PIL import Image
 import abc
 import math
 
+from multiprocessing.dummy import Pool as ThreadPool
+
 class AbstractProjection:
   __metaclass__ = abc.ABCMeta
 
@@ -35,16 +37,50 @@ class AbstractProjection:
   def saveImage(self, destFile):
     self.downsample(self.image).save(destFile)
 
+  def reprojectToThisThreaded(self, sourceProjection, numThreads):
+    uvList = []
+
+    for x in range(self.imsize[0]):
+      for y in range(self.imsize[1]):
+        u = float(x)/float(self.imsize[0])
+        v = float(y)/float(self.imsize[1])
+        uvList.append((u,v))
+
+    poolUV = ThreadPool(numThreads)
+    angleList = poolUV.map(self.angular_position, uvList)
+    poolUV.close()
+    poolUV.join()
+    print "GOT ANGLE LIST"
+
+    poolAngles = ThreadPool(numThreads)
+    image = poolAngles.map(sourceProjection.pixel_value, angleList)
+    poolAngles.close()
+    poolAngles.join()
+    print "ALL DONE"
+
+    print image[0:10]
+
+    idx = 0
+    for x in range(self.imsize[0]):
+      for y in range(self.imsize[1]):
+        pixel = image[idx]
+        if pixel is None:
+          print x,y
+        else:
+          self.image.putpixel((x,y),pixel)
+        idx = idx + 1
+
+
   def reprojectToThis(self, sourceProjection):
     for x in range(self.imsize[0]):
       for y in range(self.imsize[1]):
         u = float(x)/float(self.imsize[0])
         v = float(y)/float(self.imsize[1])
-        theta, phi = self.angular_position(u,v)
+        theta, phi = self.angular_position((u,v))
         if theta is None or phi is None:
           pixel = (0,0,0)
         else:
-          pixel = sourceProjection.pixel_value(theta, phi)
+          pixel = sourceProjection.pixel_value((theta, phi))
         self.image.putpixel((x,y),pixel)
 
   def point_on_sphere(self, theta, phi):
@@ -52,25 +88,31 @@ class AbstractProjection:
     return (r*math.cos(theta), r*math.sin(theta), math.sin(phi))
 
   @abc.abstractmethod
-  def pixel_value(self, theta, phi):
+  def pixel_value(self, angle):
     return None
 
   @abc.abstractmethod
-  def angular_position(self, u, v):
+  def angular_position(self, texcoord):
     return None
 
 class EquirectangularProjection(AbstractProjection):
   def __init__(self):
     AbstractProjection.__init__(self)
 
-  def pixel_value(self, theta, phi):
+  def pixel_value(self, angle):
+    theta = angle[0]
+    phi = angle[1]
+    if theta is None or phi is None:
+      return (0,0,0)
     # theta: -pi..pi -> u: 0..1
     u = 0.5+0.5*(theta/math.pi)
     # phi: -pi/2..pi/2 -> v: 0..1
     v = 0.5+(phi/math.pi)
     return self.get_pixel_from_uv(u,v, self.image)
 
-  def angular_position(self, u, v):
+  def angular_position(self, texcoord):
+    u = texcoord[0]
+    v = texcoord[1]
     # theta: u: 0..1 -> -pi..pi
     theta = math.pi*2.0*(u-0.5)
     # phi: v: 0..1 - > -pi/2..pi/2
@@ -81,7 +123,12 @@ class SideBySideFisheyeProjection(AbstractProjection):
   def __init__(self):
     AbstractProjection.__init__(self)
 
-  def pixel_value(self, theta, phi):
+  def pixel_value(self, angle):
+    theta = angle[0]
+    phi = angle[1]
+    if theta is None or phi is None:
+      return (0,0,0)
+
     r = math.cos(phi)
     # z is elevation in this case
     sphere_pnt = self.point_on_sphere(theta, phi)
@@ -98,7 +145,9 @@ class SideBySideFisheyeProjection(AbstractProjection):
 
     return self.get_pixel_from_uv(u,v, self.image)
 
-  def angular_position(self, up, v):
+  def angular_position(self, texcoord):
+    up = texcoord[0]
+    v = texcoord[1]
     # correct for hemisphere
     if up>=0.5:
       u = 2.0*(up-0.5)
@@ -152,7 +201,12 @@ class CubemapProjection(AbstractProjection):
     self.downsample(self.top).save(top)
     self.downsample(self.bottom).save(bottom)
 
-  def pixel_value(self, theta, phi):
+  def pixel_value(self, angle):
+    theta = angle[0]
+    phi = angle[1]
+    if theta is None or phi is None:
+      return (0,0,0)
+
     sphere_pnt = self.point_on_sphere(theta, phi)
     x = sphere_pnt[0]
     y = sphere_pnt[1]
@@ -213,7 +267,9 @@ class CubemapProjection(AbstractProjection):
     phi = math.asin(z)
     return theta, phi
 
-  def angular_position(self, u, v):
+  def angular_position(self, texcoord):
+    u = texcoord[0]
+    v = texcoord[1]
     return None
 
   def reprojectToThis(self, sourceProjection):
@@ -226,41 +282,42 @@ class CubemapProjection(AbstractProjection):
 
         # front
         theta, phi = self.get_theta_phi(halfcubeedge, u, v)
-        pixel = sourceProjection.pixel_value(theta, phi)
+        pixel = sourceProjection.pixel_value((theta, phi))
         self.front.putpixel((x,y), pixel)
 
         # right
         theta, phi = self.get_theta_phi(-u, halfcubeedge, v)
-        pixel = sourceProjection.pixel_value(theta, phi)
+        pixel = sourceProjection.pixel_value((theta, phi))
         self.right.putpixel((x,y), pixel)
 
         # left
         theta, phi = self.get_theta_phi(u, -halfcubeedge, v)
-        pixel = sourceProjection.pixel_value(theta, phi)
+        pixel = sourceProjection.pixel_value((theta, phi))
         self.left.putpixel((x,y), pixel)
 
         # back
         theta, phi = self.get_theta_phi(-halfcubeedge, -u, v)
-        pixel = sourceProjection.pixel_value(theta, phi)
+        pixel = sourceProjection.pixel_value((theta, phi))
         self.back.putpixel((x,y), pixel)
 
         # bottom
         theta, phi = self.get_theta_phi(-v, u, halfcubeedge)
-        pixel = sourceProjection.pixel_value(theta, phi)
+        pixel = sourceProjection.pixel_value((theta, phi))
         self.bottom.putpixel((x,y), pixel)
 
         # top
         theta, phi = self.get_theta_phi(v, u, -halfcubeedge)
-        pixel = sourceProjection.pixel_value(theta, phi)
+        pixel = sourceProjection.pixel_value((theta, phi))
         self.top.putpixel((x,y), pixel)
 
-# eq = EquirectangularProjection()
-# eq.loadImage("cuber.jpg")
-#
-# sbs = SideBySideFisheyeProjection()
-# sbs.initImage(2048, 1024)
-# sbs.reprojectToThis(eq)
-# sbs.saveImage("foo.png")
+eq = EquirectangularProjection()
+eq.loadImage("cuber.jpg")
+
+sbs = SideBySideFisheyeProjection()
+sbs.initImage(2048, 1024)
+# sbs.reprojectToThisThreaded(eq, 32)
+sbs.reprojectToThis(eq)
+sbs.saveImage("foo.png")
 #
 # sbs2 = SideBySideFisheyeProjection()
 # sbs2.loadImage("foo.png")
@@ -274,11 +331,11 @@ class CubemapProjection(AbstractProjection):
 # cb.initImages(1024,1024)
 # cb.reprojectToThis(eq)
 # cb.saveImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+#
 
-
-cb2 = CubemapProjection()
-cb2.loadImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
-eq2 = EquirectangularProjection()
-eq2.initImage(2048,1024)
-eq2.reprojectToThis(cb2)
-eq2.saveImage("foo.png")
+# cb2 = CubemapProjection()
+# cb2.loadImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+# eq2 = EquirectangularProjection()
+# eq2.initImage(2048,1024)
+# eq2.reprojectToThis(cb2)
+# eq2.saveImage("foo.png")
