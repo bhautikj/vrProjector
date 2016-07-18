@@ -9,7 +9,11 @@ class AbstractProjection:
   __metaclass__ = abc.ABCMeta
 
   def __init__(self):
+    self.use_bilinear = False
     pass
+
+  def set_use_bilinear(self, val):
+    self.use_bilinear = val
 
   def get_pixel_from_uv(self, u, v, image):
     x = int(self.imsize[0]*u)
@@ -25,10 +29,12 @@ class AbstractProjection:
   def loadImage(self, imageFile):
     self.image = Image.open(imageFile)
     self.imsize = self.image.size
+    self.set_angular_resolution()
 
   def initImage(self, width, height):
     self.imsize = (width*2, height*2)
     self.image = Image.new("RGB", self.imsize)
+    self.set_angular_resolution()
 
   def downsample(self, image):
     resized = image.resize((self.imsize[0]/2, self.imsize[1]/2), Image.ANTIALIAS)
@@ -77,19 +83,76 @@ class AbstractProjection:
     r = math.cos(phi)
     return (r*math.cos(theta), r*math.sin(theta), math.sin(phi))
 
-  @abc.abstractmethod
   def pixel_value(self, angle):
+    if self.use_bilinear:
+      return self._pixel_value_bilinear_interpolated(angle)
+    else:
+      return self._pixel_value(angle)
+
+  @abc.abstractmethod
+  def _pixel_value(self, angle):
     return None
 
   @abc.abstractmethod
   def angular_position(self, texcoord):
     return None
 
+  @abc.abstractmethod
+  def set_angular_resolution(self):
+    return None
+
+  @staticmethod
+  def bilinear_interpolation(x, y, points):
+      '''Interpolate (x,y) from values associated with four points.
+
+      The four points are a list of four triplets:  (x, y, value).
+      The four points can be in any order.  They should form a rectangle.
+
+          >>> bilinear_interpolation(12, 5.5,
+          ...                        [(10, 4, 100),
+          ...                         (20, 4, 200),
+          ...                         (10, 6, 150),
+          ...                         (20, 6, 300)])
+          165.0
+
+      '''
+      # See formula at:  http://en.wikipedia.org/wiki/Bilinear_interpolation
+
+      points = sorted(points)               # order points by x, then by y
+      (x1, y1, q11), (_x1, y2, q12), (x2, _y1, q21), (_x2, _y2, q22) = points
+
+      if x1 != _x1 or x2 != _x2 or y1 != _y1 or y2 != _y2:
+          raise ValueError('points do not form a rectangle')
+      if not x1 <= x <= x2 or not y1 <= y <= y2:
+          raise ValueError('(x, y) not within the rectangle')
+
+      return (q11 * (x2 - x) * (y2 - y) +
+              q21 * (x - x1) * (y2 - y) +
+              q12 * (x2 - x) * (y - y1) +
+              q22 * (x - x1) * (y - y1)
+             ) / ((x2 - x1) * (y2 - y1) + 0.0)
+
+  def _pixel_value_bilinear_interpolated(self, angle):
+    angleeps = self.angular_resolution/8.0
+    pixelA = self._pixel_value((angle[0]-angleeps, angle[1]-angleeps))
+    pixelB = self._pixel_value((angle[0]-angleeps, angle[1]+angleeps))
+    pixelC = self._pixel_value((angle[0]+angleeps, angle[1]-angleeps))
+    pixelD = self._pixel_value((angle[0]+angleeps, angle[1]+angleeps))
+
+    pixelR = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[0]), (-1,1, pixelB[0]), (1,-1, pixelC[0]), (1,1, pixelD[0])])
+    pixelG = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[1]), (-1,1, pixelB[1]), (1,-1, pixelC[1]), (1,1, pixelD[1])])
+    pixelB = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[2]), (-1,1, pixelB[2]), (1,-1, pixelC[2]), (1,1, pixelD[2])])
+
+    return (int(pixelR), int(pixelG), int(pixelB))
+
 class EquirectangularProjection(AbstractProjection):
   def __init__(self):
     AbstractProjection.__init__(self)
 
-  def pixel_value(self, angle):
+  def set_angular_resolution(self):
+    self.angular_resolution = math.pi/self.imsize[1]
+
+  def _pixel_value(self, angle):
     theta = angle[0]
     phi = angle[1]
     if theta is None or phi is None:
@@ -114,7 +177,10 @@ class SideBySideFisheyeProjection(AbstractProjection):
   def __init__(self):
     AbstractProjection.__init__(self)
 
-  def pixel_value(self, angle):
+  def set_angular_resolution(self):
+    self.angular_resolution = math.pi/self.imsize[1]
+
+  def _pixel_value(self, angle):
     theta = angle[0]
     phi = angle[1]
     if theta is None or phi is None:
@@ -167,6 +233,16 @@ class CubemapProjection(AbstractProjection):
   def __init__(self):
     AbstractProjection.__init__(self)
 
+  def set_angular_resolution(self):
+    # imsize on a face: covers 90 degrees
+    #     |\
+    #  0.5| \
+    #     |  \
+    #     -----
+    #     1/self.imsize[0]
+    #  angular res ~= arctan(1/self.imsize[0], 0.5)
+    self.angular_resolution = math.atan2(1/self.imsize[0], 0.5)
+
   def loadImages(self, front, right, back, left, top, bottom):
     self.front = Image.open(front)
     self.right = Image.open(right)
@@ -175,6 +251,7 @@ class CubemapProjection(AbstractProjection):
     self.top = Image.open(top)
     self.bottom = Image.open(bottom)
     self.imsize = self.front.size
+    self.set_angular_resolution()
 
   def initImages(self, width, height):
     self.imsize = (width*2, height*2)
@@ -184,6 +261,7 @@ class CubemapProjection(AbstractProjection):
     self.left = Image.new("RGB", self.imsize)
     self.top = Image.new("RGB", self.imsize)
     self.bottom = Image.new("RGB", self.imsize)
+    self.set_angular_resolution()
 
   def saveImages(self, front, right, back, left, top, bottom):
     self.downsample(self.front).save(front)
@@ -193,7 +271,7 @@ class CubemapProjection(AbstractProjection):
     self.downsample(self.top).save(top)
     self.downsample(self.bottom).save(bottom)
 
-  def pixel_value(self, angle):
+  def _pixel_value(self, angle):
     theta = angle[0]
     phi = angle[1]
     if theta is None or phi is None:
@@ -303,8 +381,6 @@ class CubemapProjection(AbstractProjection):
         pixel = sourceProjection.pixel_value((theta, phi))
         self.top.putpixel((x,y), pixel)
 
-# eq = EquirectangularProjection()
-# eq.loadImage("cuber.jpg")
 #
 # sbs = SideBySideFisheyeProjection()
 # sbs.initImage(2048, 1024)
@@ -320,10 +396,13 @@ class CubemapProjection(AbstractProjection):
 # eq2.reprojectToThis(sbs2)
 # eq2.saveImage("foo2.png")
 
-# cb = CubemapProjection()
-# cb.initImages(1024,1024)
-# cb.reprojectToThis(eq)
-# cb.saveImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+eq = EquirectangularProjection()
+eq.loadImage("cuber.jpg")
+eq.set_use_bilinear(True)
+cb = CubemapProjection()
+cb.initImages(256,256)
+cb.reprojectToThis(eq)
+cb.saveImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
 #
 
 # cb2 = CubemapProjection()
