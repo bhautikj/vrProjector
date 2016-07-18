@@ -37,28 +37,18 @@ class AbstractProjection:
   def saveImage(self, destFile):
     self.downsample(self.image).save(destFile)
 
+  # this isn't any faster because of the GIL on the image object
   def reprojectToThisThreaded(self, sourceProjection, numThreads):
     uvList = []
+    fx = float(self.imsize[0])
+    fy = float(self.imsize[1])
 
-    for x in range(self.imsize[0]):
-      for y in range(self.imsize[1]):
-        u = float(x)/float(self.imsize[0])
-        v = float(y)/float(self.imsize[1])
-        uvList.append((u,v))
-
-    poolUV = ThreadPool(numThreads)
-    angleList = poolUV.map(self.angular_position, uvList)
-    poolUV.close()
-    poolUV.join()
-    print "GOT ANGLE LIST"
+    angleList = [self.angular_position((float(i)/fx,float(j)/fy)) for i in range(self.imsize[0]) for j in range(self.imsize[1])]
 
     poolAngles = ThreadPool(numThreads)
     image = poolAngles.map(sourceProjection.pixel_value, angleList)
     poolAngles.close()
     poolAngles.join()
-    print "ALL DONE"
-
-    print image[0:10]
 
     idx = 0
     for x in range(self.imsize[0]):
@@ -110,7 +100,8 @@ class EquirectangularProjection(AbstractProjection):
     v = 0.5+(phi/math.pi)
     return self.get_pixel_from_uv(u,v, self.image)
 
-  def angular_position(self, texcoord):
+  @staticmethod
+  def angular_position(texcoord):
     u = texcoord[0]
     v = texcoord[1]
     # theta: u: 0..1 -> -pi..pi
@@ -145,7 +136,8 @@ class SideBySideFisheyeProjection(AbstractProjection):
 
     return self.get_pixel_from_uv(u,v, self.image)
 
-  def angular_position(self, texcoord):
+  @staticmethod
+  def angular_position(texcoord):
     up = texcoord[0]
     v = texcoord[1]
     # correct for hemisphere
@@ -267,7 +259,8 @@ class CubemapProjection(AbstractProjection):
     phi = math.asin(z)
     return theta, phi
 
-  def angular_position(self, texcoord):
+  @staticmethod
+  def angular_position(texcoord):
     u = texcoord[0]
     v = texcoord[1]
     return None
@@ -310,14 +303,14 @@ class CubemapProjection(AbstractProjection):
         pixel = sourceProjection.pixel_value((theta, phi))
         self.top.putpixel((x,y), pixel)
 
-eq = EquirectangularProjection()
-eq.loadImage("cuber.jpg")
-
-sbs = SideBySideFisheyeProjection()
-sbs.initImage(2048, 1024)
-# sbs.reprojectToThisThreaded(eq, 32)
-sbs.reprojectToThis(eq)
-sbs.saveImage("foo.png")
+# eq = EquirectangularProjection()
+# eq.loadImage("cuber.jpg")
+#
+# sbs = SideBySideFisheyeProjection()
+# sbs.initImage(2048, 1024)
+## sbs.reprojectToThisThreaded(eq, 8)
+# sbs.reprojectToThis(eq)
+# sbs.saveImage("foo.png")
 #
 # sbs2 = SideBySideFisheyeProjection()
 # sbs2.loadImage("foo.png")
