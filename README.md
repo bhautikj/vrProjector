@@ -15,13 +15,13 @@ $ pip install Pillow
 You can run vrProjector simply by running the ```vrProjectorCmd``` shell script on the command-line. You'll need to specify the source and output projection types as well as the source/output images and paramaters themselves. For example, use this to turn an equirectangular image into a set of 128x128 pixel cubemap faces:
 
 ```sh
-$ ./vrProjectorCmd --sourceProjection Equirectangular --sourceImage images\equirectangular.jpg --sourceProjection Equirectangular --outProjection CubeMap --outImage "front.png right.png back.png left.png top.png bottom.png" --outWidth 128 --outHeight 128
+$ ./vrProjectorCmd --sourceProjection Equirectangular --sourceImage images/equirectangular.png --sourceProjection Equirectangular --outProjection CubeMap --outImage "front.png right.png back.png left.png top.png bottom.png" --outWidth 128 --outHeight 128
 ```
 
 This converts an input equirectangular image into a side-by-side fisheye projection:
 
 ```sh
-$ ./vrProjectorCmd --sourceProjection Equirectangular --sourceImage images\equirectangular.jpg --sourceProjection Equirectangular --outProjection SideBySideFisheye --outImage foo.png --outWidth 256 --outHeight 128
+$ ./vrProjectorCmd --sourceProjection Equirectangular --sourceImage images/equirectangular.png --sourceProjection Equirectangular --outProjection SideBySideFisheye --outImage foo.png --outWidth 256 --outHeight 128
 ```
 
 You can access the full set of available commands via the ```-h``` switch:
@@ -71,7 +71,7 @@ Now load up your source projection - you'd do this for equirectangular:
 
 ```python
 source = vrProjector.EquirectangularProjection()
-source.loadImage("images\equirectangular.jpg")
+source.loadImage("images/equirectangular.png")
 ```
 
 or this for a set of cubemap images:
