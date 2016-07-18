@@ -1,4 +1,4 @@
-# vrProjector
+# vrProjector, by Bhautik Joshi
 
 vrProjector is a python library and command-line tool to convert from one type of spherical projection to another. Currently it supports converting between Equirectangular, Cubemaps and Side-by-Side fisheye projections.
 
@@ -18,10 +18,10 @@ You can run vrProjector simply by running the ```vrProjectorCmd``` shell script 
 $ ./vrProjectorCmd --sourceProjection Equirectangular --sourceImage images\equirectangular.jpg --sourceProjection Equirectangular --outProjection CubeMap --outImage "front.png right.png back.png left.png top.png bottom.png" --outWidth 128 --outHeight 128
 ```
 
-This converts an input equirectangular image into a 2048x1024 pixel side-by-side fisheye projection:
+This converts an input equirectangular image into a side-by-side fisheye projection:
 
 ```sh
-$ ./vrProjectorCmd --sourceProjection Equirectangular --sourceImage images\equirectangular.jpg --sourceProjection Equirectangular --outProjection SideBySideFisheye --outImage foo.png --outWidth 2048 --outHeight 1024
+$ ./vrProjectorCmd --sourceProjection Equirectangular --sourceImage images\equirectangular.jpg --sourceProjection Equirectangular --outProjection SideBySideFisheye --outImage foo.png --outWidth 256 --outHeight 128
 ```
 
 You can access the full set of available commands via the ```-h``` switch:
@@ -60,3 +60,47 @@ optional arguments:
 ```
 
 ### Running vrProjector in python
+
+First thing to do is to import the vrProjector package:
+
+```python
+import vrProjector
+```
+
+Now load up your source projection - you'd do this for equirectangular:
+
+```python
+source = vrProjector.EquirectangularProjection()
+source.loadImage("images\equirectangular.jpg")
+```
+
+or this for a set of cubemap images:
+
+```python
+source = vrProjector.CubemapProjection()
+source.loadImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+```
+
+If you want, you can set up the reprojection to bilinearly sample across the surface of the sphere. This improves the quality of low-resolution images a little but leads to a 4x increase in run-time:
+
+```python
+source.set_use_bilinear(True)
+```
+
+Now create the output projection - in this case side-by-side fisheye - and save the result:
+
+```python
+out = vrProjector.SideBySideFisheyeProjection()
+out.initImage(2048,1024)
+out.reprojectToThis(source)
+out.saveImage("sidebysidefisheye.png")
+```
+
+Cubemaps are almost the same:
+
+```python
+out = vrProjector.CubemapeProjection()
+out.initImages(1024,1024)
+out.reprojectToThis(source)
+out.saveImages("front.png", "right.png", "back.png", "left.png", "top.png", "bottom.png")
+```
