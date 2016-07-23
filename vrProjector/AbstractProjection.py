@@ -36,24 +36,38 @@ class AbstractProjection:
     pix = image[y,x]
     return pix
 
-  def loadImage(self, imageFile):
+  @staticmethod
+  def _loadImage(imageFile):
     img = Image.open(imageFile)
-    self.imsize = img.size
-    self.image = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
+    imsize = img.size
+    npimage = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
+    return npimage, imsize
+
+  def loadImage(self, imageFile):
+    self.image, self.imsize = self._loadImage(imageFile)
     self.set_angular_resolution()
+
+  @staticmethod
+  def _initImage(width, height):
+    image = np.ndarray((height, width, 3), dtype=np.uint8)
+    return image
 
   def initImage(self, width, height):
+    self.image = self._initImage(width, height)
     self.imsize = (width, height)
-    self.image = np.ndarray((height, width, 3), dtype=np.uint8)
     self.set_angular_resolution()
 
-  def saveImage(self, destFile):
+  @staticmethod
+  def _saveImage(img, imgsize, destFile):
     mode = 'RGBA'
-    arr = self.image.reshape(self.image.shape[0]*self.image.shape[1], self.image.shape[2])
+    arr = img.reshape(img.shape[0]*img.shape[1], img.shape[2])
     if len(arr[0]) == 3:
         arr = np.c_[arr, 255*np.ones((len(arr),1), np.uint8)]
-    img =  Image.frombuffer(mode, self.imsize, arr.tostring(), 'raw', mode, 0, 1)
+    img =  Image.frombuffer(mode, imgsize, arr.tostring(), 'raw', mode, 0, 1)
     img.save(destFile)
+
+  def saveImage(self, destFile):
+    self._saveImage(self.image, self.imsize, destFile)
 
   # this isn't any faster because of the GIL on the image object
   def reprojectToThisThreaded(self, sourceProjection, numThreads):
