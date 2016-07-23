@@ -10,6 +10,12 @@ You'll need the python imaging library; I've found it's best to get it via Pillo
 $ pip install Pillow
 ```
 
+You'll also need numpy:
+
+```sh
+$ pip install numpy
+```
+
 ### Running vrProjector on the command line
 
 You can run vrProjector simply by running the ```vrProjectorCmd``` shell script on the command-line. You'll need to specify the source and output projection types as well as the source/output images and paramaters themselves. For example, use this to turn an equirectangular image into a set of 128x128 pixel cubemap faces:
