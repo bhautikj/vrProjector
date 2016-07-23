@@ -60,6 +60,7 @@ def main():
     return
 
   out.reprojectToThis(source)
+  # out.reprojectToThisThreaded(source, 16)
 
   if args.outProjection.lower() == "Cubemap".lower():
     imageList = args.outImage.split(' ')

@@ -29,32 +29,31 @@ class CubemapProjection(AbstractProjection):
     self.angular_resolution = math.atan2(1/self.imsize[0], 0.5)
 
   def loadImages(self, front, right, back, left, top, bottom):
-    self.front = Image.open(front)
-    self.right = Image.open(right)
-    self.back = Image.open(back)
-    self.left = Image.open(left)
-    self.top = Image.open(top)
-    self.bottom = Image.open(bottom)
-    self.imsize = self.front.size
+    self.front, self.imsize = self._loadImage(front)
+    self.right, self.imsize = self._loadImage(right)
+    self.back, self.imsize = self._loadImage(back)
+    self.left, self.imsize = self._loadImage(left)
+    self.top, self.imsize = self._loadImage(top)
+    self.bottom, self.imsize = self._loadImage(bottom)
     self.set_angular_resolution()
 
   def initImages(self, width, height):
-    self.imsize = (width*2, height*2)
-    self.front = Image.new("RGB", self.imsize)
-    self.right = Image.new("RGB", self.imsize)
-    self.back = Image.new("RGB", self.imsize)
-    self.left = Image.new("RGB", self.imsize)
-    self.top = Image.new("RGB", self.imsize)
-    self.bottom = Image.new("RGB", self.imsize)
+    self.imsize = (width, height)
+    self.front = self._initImage(width, height)
+    self.right = self._initImage(width, height)
+    self.back = self._initImage(width, height)
+    self.left = self._initImage(width, height)
+    self.top = self._initImage(width, height)
+    self.bottom = self._initImage(width, height)
     self.set_angular_resolution()
 
   def saveImages(self, front, right, back, left, top, bottom):
-    self.downsample(self.front).save(front)
-    self.downsample(self.right).save(right)
-    self.downsample(self.back).save(back)
-    self.downsample(self.left).save(left)
-    self.downsample(self.top).save(top)
-    self.downsample(self.bottom).save(bottom)
+    self._saveImage(self.front, self.imsize, front)
+    self._saveImage(self.right, self.imsize, right)
+    self._saveImage(self.back, self.imsize, back)
+    self._saveImage(self.left, self.imsize, left)
+    self._saveImage(self.top, self.imsize, top)
+    self._saveImage(self.bottom, self.imsize, bottom)
 
   def _pixel_value(self, angle):
     theta = angle[0]
@@ -139,29 +138,29 @@ class CubemapProjection(AbstractProjection):
         # front
         theta, phi = self.get_theta_phi(halfcubeedge, u, v)
         pixel = sourceProjection.pixel_value((theta, phi))
-        self.front.putpixel((x,y), pixel)
+        self.front[y,x] = pixel
 
         # right
         theta, phi = self.get_theta_phi(-u, halfcubeedge, v)
         pixel = sourceProjection.pixel_value((theta, phi))
-        self.right.putpixel((x,y), pixel)
+        self.right[y,x] = pixel
 
         # left
         theta, phi = self.get_theta_phi(u, -halfcubeedge, v)
         pixel = sourceProjection.pixel_value((theta, phi))
-        self.left.putpixel((x,y), pixel)
+        self.left[y,x] = pixel
 
         # back
         theta, phi = self.get_theta_phi(-halfcubeedge, -u, v)
         pixel = sourceProjection.pixel_value((theta, phi))
-        self.back.putpixel((x,y), pixel)
+        self.back[y,x] = pixel
 
         # bottom
         theta, phi = self.get_theta_phi(-v, u, halfcubeedge)
         pixel = sourceProjection.pixel_value((theta, phi))
-        self.bottom.putpixel((x,y), pixel)
+        self.bottom[y,x] = pixel
 
         # top
         theta, phi = self.get_theta_phi(v, u, -halfcubeedge)
         pixel = sourceProjection.pixel_value((theta, phi))
-        self.top.putpixel((x,y), pixel)
+        self.top[y,x] = pixel
