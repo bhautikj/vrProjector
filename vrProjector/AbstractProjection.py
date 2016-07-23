@@ -44,16 +44,13 @@ class AbstractProjection:
     self.set_angular_resolution()
 
   def initImage(self, width, height):
-    self.imsize = (width*2, height*2)
+    self.imsize = (width, height)
     self.image = Image.new("RGB", self.imsize)
     self.set_angular_resolution()
 
-  def downsample(self, image):
-    resized = image.resize((self.imsize[0]/2, self.imsize[1]/2), Image.ANTIALIAS)
-    return resized
 
   def saveImage(self, destFile):
-    self.downsample(self.image).save(destFile)
+    self.image.save(destFile)
 
   # this isn't any faster because of the GIL on the image object
   def reprojectToThisThreaded(self, sourceProjection, numThreads):
