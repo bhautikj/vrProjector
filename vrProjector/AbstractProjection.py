@@ -14,6 +14,7 @@
 from PIL import Image
 import math
 import abc
+import numpy as np
 
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -32,25 +33,27 @@ class AbstractProjection:
     y = int(self.imsize[1]*v)
     x = min(x,self.imsize[0]-1)
     y = min(y,self.imsize[1]-1)
-    try:
-      pix = image.getpixel((x,y))
-      return pix
-    except:
-      print x,y, self.imsize[0], self.imsize[1]
+    pix = image[y,x]
+    return pix
 
   def loadImage(self, imageFile):
-    self.image = Image.open(imageFile)
-    self.imsize = self.image.size
+    img = Image.open(imageFile)
+    self.imsize = img.size
+    self.image = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
     self.set_angular_resolution()
 
   def initImage(self, width, height):
     self.imsize = (width, height)
-    self.image = Image.new("RGB", self.imsize)
+    self.image = np.ndarray((height, width, 3), dtype=np.uint8)
     self.set_angular_resolution()
 
-
   def saveImage(self, destFile):
-    self.image.save(destFile)
+    mode = 'RGBA'
+    arr = self.image.reshape(self.image.shape[0]*self.image.shape[1], self.image.shape[2])
+    if len(arr[0]) == 3:
+        arr = np.c_[arr, 255*np.ones((len(arr),1), np.uint8)]
+    img =  Image.frombuffer(mode, self.imsize, arr.tostring(), 'raw', mode, 0, 1)
+    img.save(destFile)
 
   # this isn't any faster because of the GIL on the image object
   def reprojectToThisThreaded(self, sourceProjection, numThreads):
@@ -72,7 +75,7 @@ class AbstractProjection:
         if pixel is None:
           print x,y
         else:
-          self.image.putpixel((x,y),pixel)
+          self.image[y,x] = pixel
         idx = idx + 1
 
 
@@ -86,7 +89,7 @@ class AbstractProjection:
           pixel = (0,0,0)
         else:
           pixel = sourceProjection.pixel_value((theta, phi))
-        self.image.putpixel((x,y),pixel)
+        self.image[y,x] = pixel
 
   def point_on_sphere(self, theta, phi):
     r = math.cos(phi)
