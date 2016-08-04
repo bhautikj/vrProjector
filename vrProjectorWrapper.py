@@ -59,8 +59,8 @@ def main():
     print "Quitting because unsupported output projection type: " + args.outProjection
     return
 
-  out.reprojectToThis(source)
-  # out.reprojectToThisThreaded(source, 16)
+  # out.reprojectToThis(source)
+  out.reprojectToThisThreaded(source)
 
   if args.outProjection.lower() == "Cubemap".lower():
     imageList = args.outImage.split(' ')

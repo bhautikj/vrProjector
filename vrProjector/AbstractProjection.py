@@ -15,8 +15,24 @@ from PIL import Image
 import math
 import abc
 import numpy as np
+import time
 
-from multiprocessing.dummy import Pool as ThreadPool
+from joblib import Parallel, delayed
+
+def reprojectRow(uvrowdata):
+  uvrow = uvrowdata["row"]
+  dest = uvrowdata["dest"]
+  source = uvrowdata["source"]
+  results = []
+  for uv in uvrow:
+    theta, phi = dest.angular_position(uv)
+    if theta is None or phi is None:
+      pixel = (0,0,0)
+    else:
+      pixel = source.pixel_value((theta, phi))
+    results.append(pixel)
+  return results
+
 
 class AbstractProjection:
   __metaclass__ = abc.ABCMeta
@@ -69,41 +85,56 @@ class AbstractProjection:
   def saveImage(self, destFile):
     self._saveImage(self.image, self.imsize, destFile)
 
-  # this isn't any faster because of the GIL on the image object
-  def reprojectToThisThreaded(self, sourceProjection, numThreads):
-    uvList = []
-    fx = float(self.imsize[0])
-    fy = float(self.imsize[1])
 
-    angleList = [self.angular_position((float(i)/fx,float(j)/fy)) for i in range(self.imsize[0]) for j in range(self.imsize[1])]
-
-    poolAngles = ThreadPool(numThreads)
-    image = poolAngles.map(sourceProjection.pixel_value, angleList)
-    poolAngles.close()
-    poolAngles.join()
-
-    idx = 0
+  def reprojectToThisThreaded(self, sourceProjection):
+    uvRows = []
     for x in range(self.imsize[0]):
+      uvrow = []
       for y in range(self.imsize[1]):
-        pixel = image[idx]
-        if pixel is None:
-          print x,y
-        else:
-          self.image[y,x] = pixel
-        idx = idx + 1
+        u = float(x)/float(self.imsize[0])
+        v = float(y)/float(self.imsize[1])
+        uvrow.append((u,v))
+
+      dt = {}
+      dt["row"] = uvrow
+      dt["source"] = sourceProjection
+      dt["dest"] = self
+      uvRows.append(dt)
+
+    results = Parallel(n_jobs=-1)(delayed(reprojectRow)(i) for i in uvRows)
+
+    for row in results:
+      self.image[y] = row
+
+        # theta, phi = self.angular_position((u,v))
+        # if theta is None or phi is None:
+        #   pixel = (0,0,0)
+        # else:
+        #   pixel = sourceProjection.pixel_value((theta, phi))
+        # self.image[y,x] = pixel
 
 
   def reprojectToThis(self, sourceProjection):
+    angtime = 0.0
+    pvtime = 0.0
+    settime = 0.0
     for x in range(self.imsize[0]):
       for y in range(self.imsize[1]):
         u = float(x)/float(self.imsize[0])
         v = float(y)/float(self.imsize[1])
+        start = time.clock()
         theta, phi = self.angular_position((u,v))
+        angtime += time.clock() - start
         if theta is None or phi is None:
           pixel = (0,0,0)
         else:
+          start = time.clock()
           pixel = sourceProjection.pixel_value((theta, phi))
+          pvtime += time.clock() - start
+        start = time.clock()
         self.image[y,x] = pixel
+        settime += time.clock() - start
+    print "angtime=" + str(angtime) + " pvtime=" + str(pvtime) + " settime=" + str(settime)
 
   def point_on_sphere(self, theta, phi):
     r = math.cos(phi)
