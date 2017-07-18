@@ -38,7 +38,7 @@ def main():
     imageList = args.sourceImage.split(' ')
     source.loadImages(imageList[0], imageList[1], imageList[2], imageList[3], imageList[4], imageList[5])
   else:
-    print "Quitting because unsupported source projection type: " + args.sourceProjection
+    print("Quitting because unsupported source projection type: ", args.sourceProjection)
     return
 
   if args.useBilnear is not None:
@@ -56,7 +56,7 @@ def main():
     out = vrProjector.CubemapProjection()
     out.initImages(int(args.outWidth), int(args.outHeight))
   else:
-    print "Quitting because unsupported output projection type: " + args.outProjection
+    print("Quitting because unsupported output projection type: ", args.outProjection)
     return
 
   out.reprojectToThis(source)
