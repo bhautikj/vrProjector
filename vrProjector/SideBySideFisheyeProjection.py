@@ -10,7 +10,7 @@
 # limitations under the License.
 
 
-from AbstractProjection import AbstractProjection
+from .AbstractProjection import AbstractProjection
 import math
 
 class SideBySideFisheyeProjection(AbstractProjection):

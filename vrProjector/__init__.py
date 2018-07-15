@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from AbstractProjection import AbstractProjection
-from EquirectangularProjection import EquirectangularProjection
-from SideBySideFisheyeProjection import SideBySideFisheyeProjection
-from CubemapProjection import CubemapProjection
+from .AbstractProjection import AbstractProjection
+from .EquirectangularProjection import EquirectangularProjection
+from .SideBySideFisheyeProjection import SideBySideFisheyeProjection
+from .CubemapProjection import CubemapProjection

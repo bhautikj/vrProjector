@@ -40,7 +40,9 @@ class AbstractProjection:
   def _loadImage(imageFile):
     img = Image.open(imageFile)
     imsize = img.size
-    npimage = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
+    parsed = Image.new("RGB", imsize, (255, 255, 255))
+    parsed.paste(img, mask=img.split()[3])
+    npimage = np.array(parsed.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
     return npimage, imsize
 
   def loadImage(self, imageFile):
@@ -87,7 +89,7 @@ class AbstractProjection:
       for y in range(self.imsize[1]):
         pixel = image[idx]
         if pixel is None:
-          print x,y
+          print(x,y)
         else:
           self.image[y,x] = pixel
         idx = idx + 1
