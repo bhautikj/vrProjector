@@ -16,19 +16,23 @@ import vrProjector
 
 def main():
   parser = argparse.ArgumentParser(description='Reproject photospheres')
-  parser.add_argument('--sourceProjection', required=True, help='Type of source projection. Valid values are: Equirectangular, Cubemap, SideBySideFisheye')
+  parser.add_argument('--sourceProjection', required=True, help='Type of source projection. Valid values are: Equirectangular, EquirectangularBlur, Cubemap, SideBySideFisheye')
   parser.add_argument('--sourceImage', required=True, help='Source image[s]. List multiple images in double quotes like so "front.png right.png back.png left.png top.png bottom.png"')
   parser.add_argument('--useBilnear', required=False, help='Use bilinear interpolation when reprojecting. Valid values are true and false.')
-  parser.add_argument('--outProjection', required=True, help='Type of output projection. Valid values are: Equirectangular, Cubemap, SideBySideFisheye')
+  parser.add_argument('--outProjection', required=True, help='Type of output projection. Valid values are: Equirectangular, EquirectangularBlur, Cubemap, SideBySideFisheye')
   parser.add_argument('--outImage', required=True, help='output image[s]. List multiple images in double quotes like so "front.png right.png back.png left.png top.png bottom.png"')
   parser.add_argument('--outWidth', required=True, help='output image[s] width in pixels')
   parser.add_argument('--outHeight', required=True, help='output image[s] height in pixels')
+  parser.add_argument('--kernelSize', required=False, help='kernel size for equirectangular blur')
 
   args = parser.parse_args()
 
   source = None
   if args.sourceProjection.lower() == "Equirectangular".lower():
     source = vrProjector.EquirectangularProjection()
+    source.loadImage(args.sourceImage)
+  elif args.sourceProjection.lower() == "EquirectangularBlur".lower():
+    source = vrProjector.EquirectangularBlurProjection(int(args.kernelSize))
     source.loadImage(args.sourceImage)
   elif args.sourceProjection.lower() == "SideBySideFisheye".lower():
     source = vrProjector.SideBySideFisheyeProjection()
@@ -38,7 +42,7 @@ def main():
     imageList = args.sourceImage.split(' ')
     source.loadImages(imageList[0], imageList[1], imageList[2], imageList[3], imageList[4], imageList[5])
   else:
-    print("Quitting because unsupported source projection type: ", args.sourceProjection)
+    print("Quitting because unsupported source projection type: ", args.sourceProjection.lower())
     return
 
   if args.useBilnear is not None:
@@ -48,6 +52,9 @@ def main():
   out = None
   if args.outProjection.lower() == "Equirectangular".lower():
     out = vrProjector.EquirectangularProjection()
+    out.initImage(int(args.outWidth), int(args.outHeight))
+  elif args.outProjection.lower() == "EquirectangularBlur".lower():
+    out = vrProjector.EquirectangularBlurProjection(int(args.kernelSize))
     out.initImage(int(args.outWidth), int(args.outHeight))
   elif args.outProjection.lower() == "SideBySideFisheye".lower():
     out = vrProjector.SideBySideFisheyeProjection()

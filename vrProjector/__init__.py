@@ -11,5 +11,6 @@
 
 from .AbstractProjection import AbstractProjection
 from .EquirectangularProjection import EquirectangularProjection
+from .EquirectangularBlurProjection import EquirectangularBlurProjection
 from .SideBySideFisheyeProjection import SideBySideFisheyeProjection
 from .CubemapProjection import CubemapProjection

@@ -18,6 +18,11 @@ import numpy as np
 
 from multiprocessing.dummy import Pool as ThreadPool
 
+def rangeWrap(val, minVal, maxVal):
+  val -= minVal
+  val = val % (maxVal-minVal)
+  return val + minVal
+
 class AbstractProjection:
   __metaclass__ = abc.ABCMeta
 
@@ -41,7 +46,10 @@ class AbstractProjection:
     img = Image.open(imageFile)
     imsize = img.size
     parsed = Image.new("RGB", imsize, (255, 255, 255))
-    parsed.paste(img, mask=img.split()[3])
+    if len(img.split())>3:
+      parsed.paste(img, mask=img.split()[3])
+    else:
+      parsed.paste(img)
     npimage = np.array(parsed.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
     return npimage, imsize
 
@@ -95,6 +103,29 @@ class AbstractProjection:
         idx = idx + 1
 
 
+  def sampleSourceBlur(self, sourceProjection, theta, phi):
+    kernelSizeHalf = sourceProjection.blurKernel  
+    px = 0.0
+    py = 0.0
+    pz = 0.0
+    for x in range(-kernelSizeHalf, kernelSizeHalf+1):
+      for y in range(-kernelSizeHalf, kernelSizeHalf+1):
+        # theta: -pi..pi -> u: 0..1
+        thetaP = rangeWrap((theta+x*sourceProjection.angular_resolution),-math.pi, math.pi)
+        # phi: -pi/2..pi/2 -> v: 0..1
+        phiP = rangeWrap((phi+y*sourceProjection.angular_resolution),-0.5*math.pi,0.5*math.pi)
+        #pt = self.euler_angles_to_point(theta + float(x)*sourceProjection.angular_resolution, phi + float(y)*sourceProjection.angular_resolution)
+        #thetaP, phiP = self.point_to_euler_angles(pt)
+        pix = sourceProjection.pixel_value((thetaP, phiP))
+        px += pix[0]
+        py += pix[1]
+        pz += pix[2]
+    px /= (2*kernelSizeHalf+1)*(2*kernelSizeHalf+1)
+    py /= (2*kernelSizeHalf+1)*(2*kernelSizeHalf+1)
+    pz /= (2*kernelSizeHalf+1)*(2*kernelSizeHalf+1)
+    
+    return (int(px),int(py),int(pz))
+    
   def reprojectToThis(self, sourceProjection):
     for x in range(self.imsize[0]):
       for y in range(self.imsize[1]):
@@ -104,12 +135,25 @@ class AbstractProjection:
         if theta is None or phi is None:
           pixel = (0,0,0)
         else:
-          pixel = sourceProjection.pixel_value((theta, phi))
+          if sourceProjection.blurKernel is not None:
+            pixel = self.sampleSourceBlur(sourceProjection, theta, phi)
+          else:
+            pixel = sourceProjection.pixel_value((theta, phi))
         self.image[y,x] = pixel
 
   def point_on_sphere(self, theta, phi):
     r = math.cos(phi)
     return (r*math.cos(theta), r*math.sin(theta), math.sin(phi))
+
+  def euler_angles_to_point(self, theta, phi):
+    return (math.sin(phi) * math.cos(theta), math.sin(phi) * math.sin(theta), math.cos(phi))
+
+  def point_to_euler_angles(self, point):
+    r = math.sqrt(point[0]*point[0] + point[1]*point[1] + point[2]*point[2])
+    phi = math.acos(point[2]/r);
+    theta = math.atan2(point[1], point[0])
+    return theta, phi
+
 
   def pixel_value(self, angle):
     if self.use_bilinear:
