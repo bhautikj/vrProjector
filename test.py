@@ -1,7 +1,7 @@
 import vrProjector
 
 eq = vrProjector.EquirectangularProjection()
-eq.loadImage("cuber.jpg")
+eq.loadImage("images/equirectangular.png")
 # eq.set_use_bilinear(True)
 cb = vrProjector.CubemapProjection()
 cb.initImages(256,256)

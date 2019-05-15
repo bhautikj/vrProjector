@@ -41,7 +41,8 @@ class AbstractProjection:
     img = Image.open(imageFile)
     imsize = img.size
     parsed = Image.new("RGB", imsize, (255, 255, 255))
-    parsed.paste(img, mask=img.split()[3])
+    bands = img.split()
+    parsed.paste(img, mask=(bands[3] if len(bands) == 4 else None))
     npimage = np.array(parsed.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
     return npimage, imsize
 
