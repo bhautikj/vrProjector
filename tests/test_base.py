@@ -31,5 +31,5 @@ class TestBase(TestCase):
   def test_ModernGLWrapper(self):
     mglWrapper = vrProjector.ModernGLWrapper()
     im = mglWrapper.render()
-    im.show()
+    #im.show()
     
