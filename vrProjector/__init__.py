@@ -12,6 +12,7 @@
 from .AbstractProjection import AbstractProjection
 from .EquirectangularProjection import EquirectangularProjection
 from .CubemapProjection import CubemapProjection
+from .ModernGLWrapper import ModernGLWrapper
 
 # import vrProjector.core.base
 #

@@ -13,7 +13,7 @@ class TestBase(TestCase):
       eq.loadImage("images/equirectangular.png")
       # eq.set_use_bilinear(True)
       cb = vrProjector.CubemapProjection()
-      cb.initImages(256,256)
+      cb.initImages(8,8)
       cb.reprojectToThis(eq)
       cb.saveImages(os.path.join(tmpdir,"front.png"), 
                     os.path.join(tmpdir,"right.png"), 
@@ -28,3 +28,8 @@ class TestBase(TestCase):
       self.assertTrue(os.path.exists(os.path.join(tmpdir,"top.png")))
       self.assertTrue(os.path.exists(os.path.join(tmpdir,"bottom.png")))
       
+  def test_ModernGLWrapper(self):
+    mglWrapper = vrProjector.ModernGLWrapper()
+    im = mglWrapper.render()
+    im.show()
+    
