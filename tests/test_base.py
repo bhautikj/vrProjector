@@ -34,11 +34,11 @@ class TestBase(TestCase):
 
     uniform sampler2D Texture;
 
-    in vec2 vert_pos;
+    in vec2 uv;
     out vec4 f_color;
 
     void main() {
-        f_color = vec4(texture(Texture, vert_pos).rgb, 1.0);
+        f_color = vec4(texture(Texture, uv).rgb, 1.0);
     }'''
     wrapper = vrProjector.ModernGLWrapper(fragProg=FRAGPROGTEX, outWidth=1024, outHeight=768, texture="images/testTex-1024_768.png")
     im = wrapper.render()

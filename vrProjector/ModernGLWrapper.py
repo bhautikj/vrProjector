@@ -20,11 +20,11 @@ QUADVSPROG = '''
 #version 330
 
 in vec2 in_vert;
-out vec2 vert_pos;
+out vec2 uv;
 
 void main() {
     // boilerplate - normalize vert position from [-1,1] to [0,1]
-    vert_pos = 0.5*(in_vert + 1.0);
+    uv = 0.5*(in_vert + 1.0);
     gl_Position = vec4(in_vert, 0.0, 1.0);
 }
 '''
@@ -32,11 +32,11 @@ void main() {
 SAMPLEFSPROG='''
 #version 330
 
-in vec2 vert_pos;
+in vec2 uv;
 out vec3 f_color;
 
 void main() {
-    f_color = vec3(vert_pos.x, vert_pos.y, 0.0);
+    f_color = vec3(uv.x, uv.y, 0.0);
 }
 '''
 
