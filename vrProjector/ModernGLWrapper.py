@@ -10,8 +10,6 @@ import moderngl
 import numpy as np
 
 from PIL import Image
-
-from PIL import Image
 import math
 import abc
 import numpy as np
@@ -42,22 +40,25 @@ void main() {
 }
 '''
 
-# VERTICES = np.array([
-#   1.0,  1.0,
-#   -1.0,  1.0,
-#   -1.0, -1.0,
-#   -1.0, -1.0,
-#    1.0, -1.0,
-#    1.0,  1.0
-# ])
-
 VERTICES = np.array([-1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0])
 
 class ModernGLWrapper:
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, fragProg=SAMPLEFSPROG, outWidth=512, outHeight=512):
+  def __init__(self, fragProg=SAMPLEFSPROG, outWidth=512, outHeight=512, texture=None):
     self.ctx = moderngl.create_standalone_context()
+
+    ##
+    ## add 
+    ## uniform sampler2D Texture;
+    ## to your fragment shader to access the texture
+    ##
+    if texture != None:
+      textureSrc = Image.open(texture).transpose(Image.FLIP_TOP_BOTTOM).convert('RGB')
+      self.texture = self.ctx.texture(textureSrc.size, 3, textureSrc.tobytes())
+      self.texture.build_mipmaps()
+      self.texture.use()
+    
     self.quadVsProg = QUADVSPROG
     self.quadFsProg = fragProg
     self.vertices = VERTICES

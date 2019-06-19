@@ -24,17 +24,10 @@ void main() {
 }'''
 
 def main():
-  wrapper = vrProjector.ModernGLWrapper(FRAGPROGTEX, 1024, 768)
-  textureSrc = Image.open("testTex-1024_768.png").transpose(Image.FLIP_TOP_BOTTOM).convert('RGB')
-  texture = wrapper.ctx.texture(textureSrc.size, 3, textureSrc.tobytes())
-  texture.build_mipmaps()
-  texture.use()
-          
+  wrapper = vrProjector.ModernGLWrapper(fragProg=FRAGPROGTEX, outWidth=1024, outHeight=768, texture="testTex-1024_768.png")
   im = wrapper.render()
   im.save('test.png')  
   
-  
-
 if __name__== "__main__":
   main()
 
