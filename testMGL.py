@@ -56,12 +56,9 @@ void main() {
   vec4 cartesian = vec4(0.0,0.0,0.0,1.0);
   
   EulerAtUV(uv, euler);
-
-  // rotate here
   EulerToCartesian(euler, cartesian);
   cartesian *= transform;
-  CartesianToEuler(cartesian, euler);
-  
+  CartesianToEuler(cartesian, euler);  
   UVAtEuler(euler, uvOut);
   
   f_color = vec4(texture(Texture, uvOut).rgb, 1.0);
