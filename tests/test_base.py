@@ -29,7 +29,20 @@ class TestBase(TestCase):
       self.assertTrue(os.path.exists(os.path.join(tmpdir,"bottom.png")))
       
   def test_ModernGLWrapper(self):
-    mglWrapper = vrProjector.ModernGLWrapper()
-    im = mglWrapper.render()
+    FRAGPROGTEX='''
+    #version 330
+
+    uniform sampler2D Texture;
+
+    in vec2 vert_pos;
+    out vec4 f_color;
+
+    void main() {
+        f_color = vec4(texture(Texture, vert_pos).rgb, 1.0);
+    }'''
+    wrapper = vrProjector.ModernGLWrapper(fragProg=FRAGPROGTEX, outWidth=1024, outHeight=768, texture="images/testTex-1024_768.png")
+    im = wrapper.render()
     #im.show()
+    #im.save('test.png')  
+    
     

@@ -24,7 +24,7 @@ void main() {
 }'''
 
 def main():
-  wrapper = vrProjector.ModernGLWrapper(fragProg=FRAGPROGTEX, outWidth=1024, outHeight=768, texture="testTex-1024_768.png")
+  wrapper = vrProjector.ModernGLWrapper(fragProg=FRAGPROGTEX, outWidth=1024, outHeight=768, texture="tests/testTex-1024_768.png")
   im = wrapper.render()
   im.save('test.png')  
   

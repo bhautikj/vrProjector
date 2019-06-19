@@ -56,7 +56,8 @@ class ModernGLWrapper:
     if texture != None:
       textureSrc = Image.open(texture).transpose(Image.FLIP_TOP_BOTTOM).convert('RGB')
       self.texture = self.ctx.texture(textureSrc.size, 3, textureSrc.tobytes())
-      self.texture.build_mipmaps()
+      #self.texture.filter = (moderngl.moderngl.LINEAR. moderngl.moderngl.LINEAR)
+      #self.texture.build_mipmaps()
       self.texture.use()
     
     self.quadVsProg = QUADVSPROG
