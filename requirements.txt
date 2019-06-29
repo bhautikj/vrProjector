@@ -1,0 +1,5 @@
+moderngl>=5.5.0
+nose
+numpy
+Pillow
+pyrr
