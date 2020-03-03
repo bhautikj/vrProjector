@@ -19,7 +19,7 @@ def main():
   parser.add_argument('--sourceProjection', required=True, help='Type of source projection. Valid values are: Equirectangular, Cubemap, SideBySideFisheye')
   parser.add_argument('--sourceImage', required=True, help='Source image[s]. List multiple images in double quotes like so "front.png right.png back.png left.png top.png bottom.png"')
   parser.add_argument('--useBilnear', required=False, help='Use bilinear interpolation when reprojecting. Valid values are true and false.')
-  parser.add_argument('--outProjection', required=True, help='Type of output projection. Valid values are: Equirectangular, Cubemap, SideBySideFisheye')
+  parser.add_argument('--outProjection', required=True, help='Type of output projection. Valid values are: Equirectangular, Cubemap, SideBySideFisheye, Fisheye')
   parser.add_argument('--outImage', required=True, help='output image[s]. List multiple images in double quotes like so "front.png right.png back.png left.png top.png bottom.png"')
   parser.add_argument('--outWidth', required=True, help='output image[s] width in pixels')
   parser.add_argument('--outHeight', required=True, help='output image[s] height in pixels')
@@ -37,6 +37,10 @@ def main():
     source = vrProjector.CubemapProjection()
     imageList = args.sourceImage.split(' ')
     source.loadImages(imageList[0], imageList[1], imageList[2], imageList[3], imageList[4], imageList[5])
+  elif args.sourceProjection.lower() == "Fisheye".lower():
+    source = vrProjector.FisheyeProjection()
+    source.loadImage(args.sourceImage)
+
   else:
     print("Quitting because unsupported source projection type: ", args.sourceProjection)
     return
@@ -55,6 +59,9 @@ def main():
   elif args.outProjection.lower() == "Cubemap".lower():
     out = vrProjector.CubemapProjection()
     out.initImages(int(args.outWidth), int(args.outHeight))
+  elif args.outProjection.lower() == "Fisheye".lower():
+    out = vrProjector.FisheyeProjection()
+    out.initImage(int(args.outWidth), int(args.outHeight))
   else:
     print("Quitting because unsupported output projection type: ", args.outProjection)
     return
