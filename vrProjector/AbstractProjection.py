@@ -40,10 +40,13 @@ class AbstractProjection:
   def _loadImage(imageFile):
     img = Image.open(imageFile)
     imsize = img.size
-    parsed = Image.new("RGB", imsize, (255, 255, 255))
-    bands = img.split()
-    parsed.paste(img, mask=(bands[3] if len(bands) == 4 else None))
-    npimage = np.array(parsed.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
+    #parsed = Image.new("RGB", imsize, (255, 255, 255))
+    #bands = img.split()
+    #parsed.paste(img, mask=(bands[3] if len(bands) == 4 else None))
+    #npimage = np.array(parsed.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
+    parsed = Image.new("RGBA", imsize, (255, 255, 255, 0))
+    parsed.paste(img)
+    npimage = np.array(parsed.getdata(), np.uint8).reshape(img.size[1], img.size[0], 4)
     return npimage, imsize
 
   def loadImage(self, imageFile):
@@ -52,7 +55,7 @@ class AbstractProjection:
 
   @staticmethod
   def _initImage(width, height):
-    image = np.ndarray((height, width, 3), dtype=np.uint8)
+    image = np.ndarray((height, width, 4), dtype=np.uint8)
     return image
 
   def initImage(self, width, height):
@@ -106,6 +109,8 @@ class AbstractProjection:
           pixel = (0,0,0)
         else:
           pixel = sourceProjection.pixel_value((theta, phi))
+        if len(pixel) == 3:
+            pixel = (pixel[0],pixel[1], pixel[2], 255)
         self.image[y,x] = pixel
 
   def point_on_sphere(self, theta, phi):
@@ -168,8 +173,9 @@ class AbstractProjection:
     pixelC = self._pixel_value((angle[0]+angleeps, angle[1]-angleeps))
     pixelD = self._pixel_value((angle[0]+angleeps, angle[1]+angleeps))
 
-    pixelR = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[0]), (-1,1, pixelB[0]), (1,-1, pixelC[0]), (1,1, pixelD[0])])
-    pixelG = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[1]), (-1,1, pixelB[1]), (1,-1, pixelC[1]), (1,1, pixelD[1])])
-    pixelB = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[2]), (-1,1, pixelB[2]), (1,-1, pixelC[2]), (1,1, pixelD[2])])
+    oR = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[0]), (-1,1, pixelB[0]), (1,-1, pixelC[0]), (1,1, pixelD[0])])
+    oG = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[1]), (-1,1, pixelB[1]), (1,-1, pixelC[1]), (1,1, pixelD[1])])
+    oB = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[2]), (-1,1, pixelB[2]), (1,-1, pixelC[2]), (1,1, pixelD[2])])
+    oA = self.bilinear_interpolation(0,0, [(-1,-1, pixelA[3]), (-1,1, pixelB[3]), (1,-1, pixelC[3]), (1,1, pixelD[3])])
 
-    return (int(pixelR), int(pixelG), int(pixelB))
+    return (int(oR), int(oG), int(oB), int(oA))
